@@ -1,0 +1,26 @@
+{
+  "name": "shopmaster",
+  "version": "1.0.0",
+  "description": "\"# shopmaster\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kasiditx/shopmaster.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kasiditx/shopmaster/issues"
+  },
+  "homepage": "https://github.com/kasiditx/shopmaster#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mongoose": "^8.20.0"
+  }
+}
