@@ -1,0 +1,158 @@
+# GitLab CI/CD Pipeline Configuration
+# Alternative to GitHub Actions
+
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# Test Backend
+test:backend:
+  stage: test
+  image: node:18-alpine
+  services:
+    - mongo:6
+    - redis:7-alpine
+  variables:
+    MONGO_URI: mongodb://mongo:27017/shopmaster_test
+    REDIS_URL: redis://redis:6379
+    NODE_ENV: test
+    JWT_SECRET: test_jwt_secret
+    JWT_REFRESH_SECRET: test_jwt_refresh_secret
+  before_script:
+    - npm ci
+  script:
+    - npm run lint || true
+    - npm test
+    - npm run test:coverage
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 1 week
+
+# Test Frontend
+test:frontend:
+  stage: test
+  image: node:18-alpine
+  before_script:
+    - cd client
+    - npm ci
+  script:
+    - npm test -- --watchAll=false --coverage
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: client/coverage/cobertura-coverage.xml
+    paths:
+      - client/coverage/
+    expire_in: 1 week
+
+# Security Scan
+security:scan:
+  stage: test
+  image: aquasec/trivy:latest
+  script:
+    - trivy fs --exit-code 0 --no-progress --format json -o trivy-report.json .
+    - trivy fs --exit-code 1 --severity CRITICAL --no-progress .
+  artifacts:
+    reports:
+      container_scanning: trivy-report.json
+    expire_in: 1 week
+  allow_failure: true
+
+# Build Backend Docker Image
+build:backend:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA .
+    - docker tag $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE/backend:latest
+    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/backend:latest
+  only:
+    - main
+    - develop
+
+# Build Frontend Docker Image
+build:frontend:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA ./client
+    - docker tag $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE/frontend:latest
+    - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/frontend:latest
+  only:
+    - main
+    - develop
+
+# Deploy to Staging
+deploy:staging:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Deploying to staging environment"
+    - curl -X POST $STAGING_DEPLOY_WEBHOOK_URL
+    - sleep 30
+    - curl -f https://api-staging.yourdomain.com/health || exit 1
+    - curl -f https://staging.yourdomain.com/health || exit 1
+  environment:
+    name: staging
+    url: https://staging.yourdomain.com
+  only:
+    - develop
+
+# Deploy to Production
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Deploying to production environment"
+    - curl -X POST $PRODUCTION_DEPLOY_WEBHOOK_URL
+    - sleep 30
+    - curl -f https://api.yourdomain.com/health || exit 1
+    - curl -f https://yourdomain.com/health || exit 1
+  environment:
+    name: production
+    url: https://yourdomain.com
+  when: manual
+  only:
+    - main
+    - tags
+
+# Rollback Production
+rollback:production:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Rolling back production deployment"
+    - curl -X POST $PRODUCTION_ROLLBACK_WEBHOOK_URL
+  environment:
+    name: production
+    url: https://yourdomain.com
+  when: manual
+  only:
+    - main

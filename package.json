@@ -4,7 +4,16 @@
   "description": "\"# shopmaster\"",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "lint": "echo \"add eslint\""
   },
   "repository": {
     "type": "git",
@@ -18,9 +27,34 @@
   },
   "homepage": "https://github.com/kasiditx/shopmaster#readme",
   "dependencies": {
+    "@sentry/node": "^10.26.0",
+    "@sentry/profiling-node": "^10.26.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.8.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "elastic-apm-node": "^4.15.0",
     "express": "^5.1.0",
-    "mongoose": "^8.20.0"
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.20.0",
+    "morgan": "^1.10.0",
+    "nodemailer": "^7.0.10",
+    "redis": "^5.9.0",
+    "socket.io": "^4.8.1",
+    "stripe": "^18.1.0",
+    "winston": "^3.18.3",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/jest": "^30.0.0",
+    "fast-check": "^4.3.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.9",
+    "playwright": "^1.56.1",
+    "supertest": "^7.1.4"
   }
 }
